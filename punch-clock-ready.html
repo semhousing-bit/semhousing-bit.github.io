@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#97002E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CTS Punch">
+<title>CTS Punch Clock</title>
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRi8eF4usUkozXHWWVULU4cpi6d56gL4vMJfqdL4nEv24JuL-XcWh3nTxpZHkVghocsQ/exec";
+
+const WORKERS = [
+  "Dylan Bruinsma",
+  "Drew Bruinsma",
+  "Jordan Van Klompenberg",
+  "Jacob Van Klompenberg",
+  "Natalie Bruinsma"
+];
+</script>
+<style>
+:root {
+  --maroon: #97002E;
+  --maroon-deep: #4D0000;
+  --grey: #6D6E71;
+  --gold: #DEB314;
+  --green: #2C7A2C;
+  --bg: #F8F5EE;
+  --card: #FFFFFF;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  height: 100%; margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: #222;
+  overscroll-behavior: none;
+}
+body {
+  display: flex; flex-direction: column;
+  min-height: 100vh; min-height: 100dvh;
+  padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
+}
+.header { text-align: center; padding: 18px 0 8px; }
+.brand {
+  color: var(--maroon); font-weight: 700; font-size: 13px;
+  letter-spacing: 2px; text-transform: uppercase;
+}
+.title { font-size: 22px; font-weight: 700; color: #222; margin: 4px 0 0; }
+.picker {
+  background: var(--card); border-radius: 14px; padding: 16px;
+  margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.picker label {
+  display: block; font-size: 12px; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--grey); margin-bottom: 6px; font-weight: 600;
+}
+.picker select {
+  width: 100%; padding: 14px 12px; font-size: 18px;
+  border: 2px solid #E0DDD4; border-radius: 10px; background: white;
+  font-family: inherit; -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%236D6E71' d='M3 6l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
+}
+.button-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 30px; padding: 20px 0;
+}
+.punch-btn {
+  width: 260px; height: 260px; max-width: 75vw; max-height: 75vw;
+  border-radius: 50%; border: none; font-family: inherit;
+  font-size: 32px; font-weight: 800; letter-spacing: 2px; color: white;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25), inset 0 -8px 0 rgba(0,0,0,0.15);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.25s ease;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.punch-btn:active {
+  transform: translateY(3px) scale(0.97);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.25), inset 0 -4px 0 rgba(0,0,0,0.15);
+}
+.punch-btn.in { background: linear-gradient(180deg, #3FA63F 0%, var(--green) 100%); }
+.punch-btn.out { background: linear-gradient(180deg, #B5103C 0%, var(--maroon) 100%); }
+.punch-btn:disabled { background: #B5B0A3; cursor: not-allowed; }
+.status {
+  text-align: center; font-size: 15px; color: #555;
+  min-height: 40px; line-height: 1.4;
+}
+.status .big { font-size: 18px; font-weight: 700; color: var(--maroon); }
+.status .elapsed { font-size: 14px; color: var(--grey); margin-top: 4px; }
+.footer { text-align: center; font-size: 11px; color: var(--grey); padding: 10px 0; }
+.toast {
+  position: fixed; top: max(20px, env(safe-area-inset-top));
+  left: 50%; transform: translateX(-50%) translateY(-100px);
+  background: #222; color: white; padding: 14px 20px; border-radius: 10px;
+  font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 1000; max-width: 90%; text-align: center;
+  opacity: 0; transition: opacity 0.3s, transform 0.3s;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--maroon-deep); }
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+  vertical-align: middle; margin-left: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">Calvin Seminary</div>
+  <h1 class="title">Punch Clock</h1>
+</div>
+
+<div class="picker">
+  <label for="worker">Who are you?</label>
+  <select id="worker">
+    <option value="">-- pick your name --</option>
+  </select>
+</div>
+
+<div class="button-wrap">
+  <button id="punchBtn" class="punch-btn in" disabled>PUNCH IN</button>
+  <div class="status" id="status">Pick your name to get started.</div>
+</div>
+
+<div class="footer">CTS Summer 2026 &middot; tap once, wait for the green check</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $worker = document.getElementById("worker");
+const $btn = document.getElementById("punchBtn");
+const $status = document.getElementById("status");
+const $toast = document.getElementById("toast");
+
+let isClockedIn = false;
+let punchInTime = null;
+let elapsedTimer = null;
+
+WORKERS.forEach(name => {
+  const opt = document.createElement("option");
+  opt.value = name; opt.textContent = name;
+  $worker.appendChild(opt);
+});
+
+const savedWorker = localStorage.getItem("cts_worker");
+if (savedWorker && WORKERS.indexOf(savedWorker) !== -1) {
+  $worker.value = savedWorker;
+  loadStatus(savedWorker);
+}
+
+$worker.addEventListener("change", () => {
+  const name = $worker.value;
+  localStorage.setItem("cts_worker", name);
+  if (name) loadStatus(name);
+  else {
+    $btn.disabled = true;
+    $status.textContent = "Pick your name to get started.";
+  }
+});
+
+$btn.addEventListener("click", handlePunch);
+
+async function loadStatus(worker) {
+  $btn.disabled = true;
+  $status.innerHTML = "Checking status <span class='spinner'></span>";
+  try {
+    const r = await fetch(`${SCRIPT_URL}?action=status&worker=${encodeURIComponent(worker)}`);
+    const data = await r.json();
+    if (data.ok && data.status) {
+      if (data.status.clockedIn) {
+        isClockedIn = true;
+        punchInTime = new Date(data.status.since);
+        renderClockedIn();
+      } else {
+        isClockedIn = false;
+        punchInTime = null;
+        renderClockedOut();
+      }
+    } else {
+      isClockedIn = false;
+      renderClockedOut();
+    }
+  } catch (err) {
+    $status.textContent = "Couldn't reach server. Tap button to try.";
+    $btn.disabled = false;
+  }
+}
+
+function renderClockedIn() {
+  $btn.textContent = "PUNCH OUT";
+  $btn.classList.remove("in"); $btn.classList.add("out");
+  $btn.disabled = false;
+  startElapsedTimer();
+}
+
+function renderClockedOut() {
+  $btn.textContent = "PUNCH IN";
+  $btn.classList.remove("out"); $btn.classList.add("in");
+  $btn.disabled = false;
+  stopElapsedTimer();
+  $status.innerHTML = `<span class='big'>Not clocked in</span><br><span class='elapsed'>Ready when you are.</span>`;
+}
+
+function startElapsedTimer() {
+  stopElapsedTimer();
+  const update = () => {
+    if (!punchInTime) return;
+    const now = new Date();
+    const ms = now - punchInTime;
+    const hrs = Math.floor(ms / 3600000);
+    const mins = Math.floor((ms % 3600000) / 60000);
+    const inTime = punchInTime.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+    $status.innerHTML = `<span class='big'>Clocked in since ${inTime}</span>` +
+                        `<div class='elapsed'>${hrs}h ${mins}m on the clock</div>`;
+  };
+  update();
+  elapsedTimer = setInterval(update, 1000 * 30);
+}
+
+function stopElapsedTimer() {
+  if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+}
+
+async function handlePunch() {
+  const worker = $worker.value;
+  if (!worker) { showToast("Pick your name first", "error"); return; }
+
+  const action = isClockedIn ? "out" : "in";
+  $btn.disabled = true;
+  $btn.textContent = (action === "in" ? "Punching in" : "Punching out");
+  $btn.innerHTML += " <span class='spinner'></span>";
+
+  try {
+    const r = await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ worker, action }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const data = await r.json();
+
+    if (data.ok) {
+      if (action === "in") {
+        isClockedIn = true;
+        punchInTime = new Date(data.punchInTime);
+        renderClockedIn();
+        showToast("Punched in. Have a great day!", "success");
+      } else {
+        isClockedIn = false;
+        const h = data.hours;
+        renderClockedOut();
+        if (h !== undefined) {
+          $status.innerHTML = `<span class='big'>Punched out</span>` +
+                              `<div class='elapsed'>You worked ${h.toFixed(2)} hours.</div>`;
+          showToast(`Logged ${h.toFixed(2)} hours \u2713`, "success");
+        } else {
+          showToast("Punched out", "success");
+        }
+      }
+    } else {
+      showToast("Error: " + (data.error || "unknown"), "error");
+      $btn.disabled = false;
+      $btn.textContent = action === "in" ? "PUNCH IN" : "PUNCH OUT";
+    }
+  } catch (err) {
+    showToast("Network error. Try again.", "error");
+    $btn.disabled = false;
+    $btn.textContent = action === "in" ? "PUNCH IN" : "PUNCH OUT";
+  }
+}
+
+function showToast(msg, type) {
+  $toast.textContent = msg;
+  $toast.className = "toast show " + (type || "");
+  setTimeout(() => { $toast.className = "toast " + (type || ""); }, 3000);
+}
+</script>
+</body>
+</html>
