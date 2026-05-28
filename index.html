@@ -9,7 +9,10 @@
 <meta name="apple-mobile-web-app-title" content="CTS Punch">
 <title>CTS Punch Clock</title>
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxiHR0PH0s2CBgE0WkI1t3QxxRfjqeqz16xVxVsISYuiI2qQwnjyEj3viuGxLOdhxsRLQ/exec";
+// ============================================================
+// CONFIG
+// ============================================================
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwm4GOa16n85iuHHQGDiho8-75QOv1oF1FRPoEHkMzOtvcHFbeRUyf6cO6Boi_pNpOPTA/exec";
 
 const WORKERS = [
   "Dylan Bruinsma",
@@ -18,6 +21,20 @@ const WORKERS = [
   "Jacob Van Klompenberg",
   "Natalie Bruinsma"
 ];
+
+// Approved work sites. Punch is "on-site" if within RADIUS_FEET of ANY of these.
+const SITES = [
+  { name: "Calvin Seminary",  lat: 42.92793612573263, lng: -85.5864072165153 },
+  { name: "President's House", lat: 42.927341592820426, lng: -85.58592003720734 },
+  { name: "3300 Burton",      lat: 42.92621857055208, lng: -85.58758005559 },
+  { name: "3501 Burton",      lat: 42.928106664854774, lng: -85.5811936091089 },
+  { name: "3511 Burton",      lat: 42.92813999396562, lng: -85.5808370468 },
+  { name: "3521 Burton",      lat: 42.92820665213318, lng: -85.58026806439214 },
+  { name: "3555 Burton",      lat: 42.92759561623036, lng: -85.58104946689892 },
+  { name: "3545 Burton",      lat: 42.92720677204537, lng: -85.58113291765207 }
+];
+
+const RADIUS_FEET = 1000; // generous radius
 </script>
 <style>
 :root {
@@ -33,9 +50,7 @@ const WORKERS = [
 html, body {
   height: 100%; margin: 0; padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  background: var(--bg);
-  color: #222;
-  overscroll-behavior: none;
+  background: var(--bg); color: #222; overscroll-behavior: none;
 }
 body {
   display: flex; flex-direction: column;
@@ -43,69 +58,47 @@ body {
   padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom) 20px;
 }
 .header { text-align: center; padding: 18px 0 8px; }
-.brand {
-  color: var(--maroon); font-weight: 700; font-size: 13px;
-  letter-spacing: 2px; text-transform: uppercase;
-}
+.brand { color: var(--maroon); font-weight: 700; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
 .title { font-size: 22px; font-weight: 700; color: #222; margin: 4px 0 0; }
-.picker {
-  background: var(--card); border-radius: 14px; padding: 16px;
-  margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-.picker label {
-  display: block; font-size: 12px; text-transform: uppercase;
-  letter-spacing: 1px; color: var(--grey); margin-bottom: 6px; font-weight: 600;
-}
+.picker { background: var(--card); border-radius: 14px; padding: 16px; margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.picker label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--grey); margin-bottom: 6px; font-weight: 600; }
 .picker select {
-  width: 100%; padding: 14px 12px; font-size: 18px;
-  border: 2px solid #E0DDD4; border-radius: 10px; background: white;
-  font-family: inherit; -webkit-appearance: none; appearance: none;
+  width: 100%; padding: 14px 12px; font-size: 18px; border: 2px solid #E0DDD4; border-radius: 10px;
+  background: white; font-family: inherit; -webkit-appearance: none; appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%236D6E71' d='M3 6l5 5 5-5z'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
 }
-.button-wrap {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 30px; padding: 20px 0;
-}
+.button-wrap { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 24px; padding: 16px 0; }
 .punch-btn {
-  width: 260px; height: 260px; max-width: 75vw; max-height: 75vw;
-  border-radius: 50%; border: none; font-family: inherit;
-  font-size: 32px; font-weight: 800; letter-spacing: 2px; color: white;
-  cursor: pointer;
+  width: 240px; height: 240px; max-width: 72vw; max-height: 72vw; border-radius: 50%; border: none;
+  font-family: inherit; font-size: 30px; font-weight: 800; letter-spacing: 2px; color: white; cursor: pointer;
   box-shadow: 0 10px 30px rgba(0,0,0,0.25), inset 0 -8px 0 rgba(0,0,0,0.15);
   transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.25s ease;
   -webkit-tap-highlight-color: transparent; user-select: none;
 }
-.punch-btn:active {
-  transform: translateY(3px) scale(0.97);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.25), inset 0 -4px 0 rgba(0,0,0,0.15);
-}
+.punch-btn:active { transform: translateY(3px) scale(0.97); box-shadow: 0 5px 15px rgba(0,0,0,0.25), inset 0 -4px 0 rgba(0,0,0,0.15); }
 .punch-btn.in { background: linear-gradient(180deg, #3FA63F 0%, var(--green) 100%); }
 .punch-btn.out { background: linear-gradient(180deg, #B5103C 0%, var(--maroon) 100%); }
 .punch-btn:disabled { background: #B5B0A3; cursor: not-allowed; }
-.status {
-  text-align: center; font-size: 15px; color: #555;
-  min-height: 40px; line-height: 1.4;
-}
+.status { text-align: center; font-size: 15px; color: #555; min-height: 40px; line-height: 1.4; }
 .status .big { font-size: 18px; font-weight: 700; color: var(--maroon); }
 .status .elapsed { font-size: 14px; color: var(--grey); margin-top: 4px; }
-.footer { text-align: center; font-size: 11px; color: var(--grey); padding: 10px 0; }
+.loc { text-align: center; font-size: 12px; color: var(--grey); min-height: 18px; }
+.loc.ok { color: var(--green); }
+.loc.warn { color: #B5103C; }
+.footer { text-align: center; font-size: 11px; color: var(--grey); padding: 8px 0; }
 .toast {
-  position: fixed; top: max(20px, env(safe-area-inset-top));
-  left: 50%; transform: translateX(-50%) translateY(-100px);
-  background: #222; color: white; padding: 14px 20px; border-radius: 10px;
-  font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  z-index: 1000; max-width: 90%; text-align: center;
-  opacity: 0; transition: opacity 0.3s, transform 0.3s;
+  position: fixed; top: max(20px, env(safe-area-inset-top)); left: 50%;
+  transform: translateX(-50%) translateY(-120px); background: #222; color: white;
+  padding: 14px 20px; border-radius: 10px; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 1000; max-width: 90%; text-align: center; opacity: 0; transition: opacity 0.3s, transform 0.3s;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.success { background: var(--green); }
 .toast.error { background: var(--maroon-deep); }
 .spinner {
-  display: inline-block; width: 14px; height: 14px;
-  border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
-  border-radius: 50%; animation: spin 0.8s linear infinite;
-  vertical-align: middle; margin-left: 6px;
+  display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-left: 6px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -127,6 +120,7 @@ body {
 <div class="button-wrap">
   <button id="punchBtn" class="punch-btn in" disabled>PUNCH IN</button>
   <div class="status" id="status">Pick your name to get started.</div>
+  <div class="loc" id="loc"></div>
 </div>
 
 <div class="footer">CTS Summer 2026 &middot; tap once, wait for the green check</div>
@@ -137,6 +131,7 @@ body {
 const $worker = document.getElementById("worker");
 const $btn = document.getElementById("punchBtn");
 const $status = document.getElementById("status");
+const $loc = document.getElementById("loc");
 const $toast = document.getElementById("toast");
 
 let isClockedIn = false;
@@ -159,33 +154,70 @@ $worker.addEventListener("change", () => {
   const name = $worker.value;
   localStorage.setItem("cts_worker", name);
   if (name) loadStatus(name);
-  else {
-    $btn.disabled = true;
-    $status.textContent = "Pick your name to get started.";
-  }
+  else { $btn.disabled = true; $status.textContent = "Pick your name to get started."; }
 });
 
 $btn.addEventListener("click", handlePunch);
 
+// ============================================================
+// Distance helper (Haversine) -> returns feet
+// ============================================================
+function distanceFeet(lat1, lng1, lat2, lng2) {
+  const R = 20902231; // earth radius in feet
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Returns a Promise resolving to {onSite, siteName, distance, error}
+function checkLocation() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) {
+      resolve({ onSite: false, siteName: null, error: "No GPS support" });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        let nearest = null, nearestDist = Infinity;
+        for (const site of SITES) {
+          const d = distanceFeet(latitude, longitude, site.lat, site.lng);
+          if (d < nearestDist) { nearestDist = d; nearest = site.name; }
+        }
+        resolve({
+          onSite: nearestDist <= RADIUS_FEET,
+          siteName: nearest,
+          distance: Math.round(nearestDist),
+          error: null
+        });
+      },
+      err => {
+        resolve({ onSite: false, siteName: null, error: err.message || "Location denied" });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+}
+
+// ============================================================
+// Status check
+// ============================================================
 async function loadStatus(worker) {
   $btn.disabled = true;
   $status.innerHTML = "Checking status <span class='spinner'></span>";
+  $loc.textContent = "";
   try {
     const r = await fetch(`${SCRIPT_URL}?action=status&worker=${encodeURIComponent(worker)}`);
     const data = await r.json();
-    if (data.ok && data.status) {
-      if (data.status.clockedIn) {
-        isClockedIn = true;
-        punchInTime = new Date(data.status.since);
-        renderClockedIn();
-      } else {
-        isClockedIn = false;
-        punchInTime = null;
-        renderClockedOut();
-      }
+    if (data.ok && data.status && data.status.clockedIn) {
+      isClockedIn = true;
+      punchInTime = new Date(data.status.since);
+      renderClockedIn();
     } else {
-      isClockedIn = false;
-      renderClockedOut();
+      isClockedIn = false; punchInTime = null; renderClockedOut();
     }
   } catch (err) {
     $status.textContent = "Couldn't reach server. Tap button to try.";
@@ -228,19 +260,44 @@ function stopElapsedTimer() {
   if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
 }
 
+// ============================================================
+// Punch
+// ============================================================
 async function handlePunch() {
   const worker = $worker.value;
   if (!worker) { showToast("Pick your name first", "error"); return; }
 
   const action = isClockedIn ? "out" : "in";
   $btn.disabled = true;
-  $btn.textContent = (action === "in" ? "Punching in" : "Punching out");
-  $btn.innerHTML += " <span class='spinner'></span>";
+  const verb = action === "in" ? "Punching in" : "Punching out";
+  $btn.innerHTML = verb + " <span class='spinner'></span>";
+  $loc.textContent = "Checking location...";
+  $loc.className = "loc";
+
+  // Get location (does not block the punch -- lenient mode)
+  const locResult = await checkLocation();
+  let locStatus, locLabel;
+  if (locResult.error) {
+    locStatus = "no-gps";
+    locLabel = "No GPS / denied";
+    $loc.textContent = "\u26a0 Location unavailable \u2014 punch flagged";
+    $loc.className = "loc warn";
+  } else if (locResult.onSite) {
+    locStatus = "on-site";
+    locLabel = locResult.siteName;
+    $loc.textContent = `\u2713 On-site: ${locResult.siteName} (${locResult.distance} ft)`;
+    $loc.className = "loc ok";
+  } else {
+    locStatus = "off-site";
+    locLabel = `${locResult.distance} ft from ${locResult.siteName}`;
+    $loc.textContent = `\u26a0 Off-site \u2014 ${locResult.distance} ft away \u2014 flagged`;
+    $loc.className = "loc warn";
+  }
 
   try {
     const r = await fetch(SCRIPT_URL, {
       method: "POST",
-      body: JSON.stringify({ worker, action }),
+      body: JSON.stringify({ worker, action, locStatus, locLabel }),
       headers: { "Content-Type": "text/plain;charset=utf-8" }
     });
     const data = await r.json();
@@ -278,7 +335,7 @@ async function handlePunch() {
 function showToast(msg, type) {
   $toast.textContent = msg;
   $toast.className = "toast show " + (type || "");
-  setTimeout(() => { $toast.className = "toast " + (type || ""); }, 3000);
+  setTimeout(() => { $toast.className = "toast " + (type || ""); }, 3500);
 }
 </script>
 </body>
